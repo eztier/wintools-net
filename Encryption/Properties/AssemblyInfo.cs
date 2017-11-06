@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("openssl")]
+[assembly: AssemblyTitle("EncryptionProvider")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("EZTier LLC")]
-[assembly: AssemblyProduct("UnmanagedEncryption")]
+[assembly: AssemblyProduct("EncryptionProvider")]
 [assembly: AssemblyCopyright("Copyright © Henry Tao 2009-2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
