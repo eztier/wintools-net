@@ -1,0 +1,11 @@
+/bin
+/obj
+/node_modules
+packages/Newtonsoft.Json*
+packages/nspec*
+*.suo
+**/bin
+**/obj
+Test.cs
+packages*/
+internal/
