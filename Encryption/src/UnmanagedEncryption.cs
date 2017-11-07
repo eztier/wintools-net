@@ -22,6 +22,20 @@ namespace wintools {
       }
     }
 
+    string privateKey = null;
+    string sharedSecret = null;
+
+    // Remove access to default constructor.
+    private UnmanagedEncryption() { }
+
+    public UnmanagedEncryption(string privateKey_, string sharedSecret_) {
+      privateKey = privateKey_;
+      sharedSecret = sharedSecret_;
+      CreateDynamicDllWrapper();
+    }
+
+    public string GetLastError { get; private set; }
+
     internal class NativeMethods {
       [DllImport("kernel32.dll")]
       public static extern IntPtr LoadLibrary(string dllToLoad);
@@ -63,11 +77,7 @@ namespace wintools {
     EncryptFileUpdate EncryptFileUpdateHandler;
     EncryptFileFinal EncryptFileFinalHandler;
     get_shared_secret GetSharedSecretHandler;
-
-    public UnmanagedEncryption() {
-      CreateDynamicDllWrapper();
-    }
-
+    
     internal bool UnloadDllWrapper() {
       if (dll_pointer != null && dll_pointer != IntPtr.Zero) {
         return NativeMethods.FreeLibrary(dll_pointer);
@@ -111,8 +121,8 @@ namespace wintools {
 
       try {
         p_filename = Marshal.StringToHGlobalAnsi(filename);
-        p_sharedsecret = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.sharedSecret);
-        p_privatekey = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.privateKey);
+        p_sharedsecret = Marshal.StringToHGlobalAnsi(sharedSecret);
+        p_privatekey = Marshal.StringToHGlobalAnsi(privateKey);
 
         decrypt_file_x_ptr = DecryptFileXHandler(p_privatekey, p_sharedsecret, p_filename, &decrypted_size);
 
@@ -122,7 +132,7 @@ namespace wintools {
         }
         FreeDecryptedMemoryHandler();
       } catch (Exception e) {
-        // logger.WriteLine(new LogEntry { Type = LogType.Error, Message = msg });
+        GetLastError = e.Message;
       } finally {
         if (p_filename != IntPtr.Zero) Marshal.FreeHGlobal(p_filename);
         if (p_privatekey != IntPtr.Zero) Marshal.FreeHGlobal(p_privatekey);
@@ -140,12 +150,12 @@ namespace wintools {
 
       try {
         p_filename = Marshal.StringToHGlobalAnsi(filename);
-        p_privatekey = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.privateKey);
-        p_sharedsecret = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.sharedSecret);
+        p_privatekey = Marshal.StringToHGlobalAnsi(privateKey);
+        p_sharedsecret = Marshal.StringToHGlobalAnsi(sharedSecret);
 
         rc = EncryptFileInitHandler(p_privatekey, p_sharedsecret, p_filename);
       } catch (Exception ex) {
-        Console.WriteLine(ex.Message);
+        GetLastError = ex.Message;
       } finally {
         if (p_filename != IntPtr.Zero) Marshal.FreeHGlobal(p_filename);
         if (p_privatekey != IntPtr.Zero) Marshal.FreeHGlobal(p_privatekey);
@@ -160,7 +170,7 @@ namespace wintools {
       try {
         rc = EncryptFileUpdateHandler(p_data, (uint)stream_len);
       } catch (Exception ex) {
-        Console.WriteLine(ex.Message);
+        GetLastError = ex.Message;
       }
       return rc;
     }
@@ -171,7 +181,7 @@ namespace wintools {
       try {
         rc = EncryptFileFinalHandler();
       } catch (Exception ex) {
-        Console.WriteLine(ex.Message);
+        GetLastError = ex.Message;
       }
       return rc;
     }
@@ -184,12 +194,12 @@ namespace wintools {
 
       try {
         p_filename = Marshal.StringToHGlobalAnsi(filename);
-        p_privatekey = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.privateKey);
-        p_sharedsecret = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.sharedSecret);
+        p_privatekey = Marshal.StringToHGlobalAnsi(privateKey);
+        p_sharedsecret = Marshal.StringToHGlobalAnsi(sharedSecret);
 
         idatawritten = EncryptFileXHandler(p_data, (uint)stream_len, p_privatekey, p_sharedsecret, p_filename);
       } catch (Exception ex) {
-        // logger.WriteLine(new LogEntry { Type = LogType.Error, Message = "FileName: " + Path.GetFileNameWithoutExtension(filename) + " DoEncryptFileX(): " + ex.Message });
+        GetLastError = ex.Message;
       } finally {
         if (p_filename != IntPtr.Zero) Marshal.FreeHGlobal(p_filename);
         if (p_privatekey != IntPtr.Zero) Marshal.FreeHGlobal(p_privatekey);
@@ -204,12 +214,12 @@ namespace wintools {
       IntPtr p_sharedsecret = IntPtr.Zero;
       string retval = "";
       try {
-        p_privatekey = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.privateKey);
-        p_sharedsecret = Marshal.StringToHGlobalAnsi(Properties.Settings.Default.sharedSecret);
+        p_privatekey = Marshal.StringToHGlobalAnsi(privateKey);
+        p_sharedsecret = Marshal.StringToHGlobalAnsi(sharedSecret);
 
         IntPtr shared_secret = GetSharedSecretHandler(p_privatekey, p_sharedsecret);
         retval = Marshal.PtrToStringAnsi(shared_secret);
-      } catch { } finally {
+      } catch (Exception e) { GetLastError = e.Message; } finally {
 
         if (p_privatekey != IntPtr.Zero) Marshal.FreeHGlobal(p_privatekey);
         if (p_sharedsecret != IntPtr.Zero) Marshal.FreeHGlobal(p_sharedsecret);

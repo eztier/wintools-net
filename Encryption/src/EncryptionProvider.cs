@@ -11,6 +11,8 @@ namespace wintools {
     private byte[] iv;
     private ICryptoTransform transform;
     private ICryptoTransform decryptTransform;
+    string privateKey = null;
+    string sharedSecret = null;
 
     private byte[] GetBase64FromHexString(string input) {
       List<string> byteStrings = new List<string>();
@@ -28,7 +30,7 @@ namespace wintools {
     }
 
     private void GetSharedSecret(ref byte[] key, ref byte[] iv) {
-      using (wintools.UnmanagedEncryption encryption = new UnmanagedEncryption()) {
+      using (wintools.UnmanagedEncryption encryption = new UnmanagedEncryption(privateKey, sharedSecret)) {
         try {
           string secret = encryption.DoGetSharedSecret();
           string[] s = secret.Split('\x20');
@@ -66,7 +68,9 @@ namespace wintools {
       return plainbytes.TakeWhile(c => (c > 31 || c == 10 || c == 13)).ToArray();
     }
 
-    public EncryptionProvider() {
+    public EncryptionProvider(string privateKey_, string sharedSecret_) {
+      privateKey = privateKey_;
+      sharedSecret = sharedSecret_;
       // Initialize and link native modules.
       CreateCrytoTransform();
     }

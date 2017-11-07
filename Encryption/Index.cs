@@ -20,7 +20,7 @@ namespace wintools {
 
   class Start {
     static void Main(string[] args) {
-      var provider = new EncryptionProvider();
+      var provider = new EncryptionProvider(wintools.Properties.Settings.Default.privateKey, wintools.Properties.Settings.Default.sharedSecret);
 
       Test.Encryption(provider);
       InternalTest.EncryptionFromFile(provider);
