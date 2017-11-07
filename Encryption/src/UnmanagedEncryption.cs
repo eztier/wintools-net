@@ -52,8 +52,10 @@ namespace wintools {
 
     IntPtr dll_pointer = IntPtr.Zero;
     IntPtr decrypt_file_x_ptr = IntPtr.Zero;
-    const string unmanagedDll = "tinycrypto.dll";
-    const string libeay32_dll = "libeay32.dll";
+    
+    static string currentDir = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory;
+    string unmanagedDll = currentDir + "\\tinycrypto.dll";
+    string libeay32_dll = currentDir + "\\libeay32.dll";
     const string C_DECRYPT_FILE_X = "DecryptFileX";
     const string C_ENCRYPT_FILE_X = "EncryptFileX";
     const string C_ENCRYPT_FILE_INIT = "EncryptFileInit";
@@ -87,7 +89,7 @@ namespace wintools {
 
     void CreateDynamicDllWrapper() {
       if (!File.Exists(unmanagedDll) | !File.Exists(libeay32_dll)) {
-        return;
+        throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
       }
       dll_pointer = NativeMethods.LoadLibrary(unmanagedDll);
 

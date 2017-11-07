@@ -36,7 +36,7 @@ namespace wintools {
           string[] s = secret.Split('\x20');
           key = GetBase64FromHexString(s[0]);
           iv = GetBase64FromHexString(s[1]);
-        } catch { }
+        } catch (Exception e) { throw new Exception(encryption.GetLastError); }
       }
     }
 
