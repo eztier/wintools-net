@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace wintools {
 
-  class EncryptionProvider {
+  public class EncryptionProvider {
     private byte[] key;
     private byte[] iv;
     private ICryptoTransform transform;

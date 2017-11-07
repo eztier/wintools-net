@@ -23,7 +23,7 @@ namespace wintools {
       var provider = new EncryptionProvider();
 
       Test.Encryption(provider);
-      // InternalTest.EncryptionFromFile(provider);
+      InternalTest.EncryptionFromFile(provider);
     }
   }
 }
