@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
 
 namespace wintools {
   unsafe public class UnmanagedEncryption : IDisposable {
@@ -37,25 +38,25 @@ namespace wintools {
     public string GetLastError { get; private set; }
 
     internal class NativeMethods {
-      [DllImport("kernel32.dll")]
+      [DllImport("kernel32.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
       public static extern IntPtr LoadLibrary(string dllToLoad);
 
-      [DllImport("kernel32.dll")]
+      [DllImport("kernel32.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
       public static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
 
       [DllImport("kernel32.dll")]
       public static extern bool FreeLibrary(IntPtr hModule);
 
-      [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
+      [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
       public static extern IntPtr MemCopy(IntPtr dest, IntPtr src, uint count);
     }
 
     IntPtr dll_pointer = IntPtr.Zero;
     IntPtr decrypt_file_x_ptr = IntPtr.Zero;
-    
-    static string currentDir = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory;
-    string unmanagedDll = currentDir + "\\tinycrypto.dll";
-    string libeay32_dll = currentDir + "\\libeay32.dll";
+
+    public static string executingDirectory = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory;
+    string unmanagedDll = executingDirectory + "\\tinycrypto.dll";
+    string libeay32_dll = executingDirectory + "\\libeay32.dll";
     const string C_DECRYPT_FILE_X = "DecryptFileX";
     const string C_ENCRYPT_FILE_X = "EncryptFileX";
     const string C_ENCRYPT_FILE_INIT = "EncryptFileInit";
@@ -71,7 +72,7 @@ namespace wintools {
     delegate int EncryptFileUpdate(IntPtr data, UInt32 datasize);
     delegate int EncryptFileFinal();
     delegate IntPtr get_shared_secret(IntPtr keyfile, IntPtr shared_secret);
-
+    
     DecryptFileX DecryptFileXHandler;
     FreeDecryptedMemory FreeDecryptedMemoryHandler;
     EncryptFileX EncryptFileXHandler;
@@ -92,6 +93,10 @@ namespace wintools {
         throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
       }
       dll_pointer = NativeMethods.LoadLibrary(unmanagedDll);
+
+      if (dll_pointer == IntPtr.Zero) {
+        throw new Win32Exception(Marshal.GetLastWin32Error());
+      }
 
       IntPtr pDecryptFileX = NativeMethods.GetProcAddress(dll_pointer, C_DECRYPT_FILE_X);
       DecryptFileXHandler = (DecryptFileX)Marshal.GetDelegateForFunctionPointer(pDecryptFileX, typeof(DecryptFileX));
@@ -218,10 +223,16 @@ namespace wintools {
       try {
         p_privatekey = Marshal.StringToHGlobalAnsi(privateKey);
         p_sharedsecret = Marshal.StringToHGlobalAnsi(sharedSecret);
-
+        
         IntPtr shared_secret = GetSharedSecretHandler(p_privatekey, p_sharedsecret);
+        if (shared_secret == IntPtr.Zero)
+          throw new Win32Exception(Marshal.GetLastWin32Error());
         retval = Marshal.PtrToStringAnsi(shared_secret);
-      } catch (Exception e) { GetLastError = e.Message; } finally {
+      } catch (Win32Exception w) {
+        throw w;
+      } catch (Exception e) {
+        throw e; // GetLastError = e.Message; 
+      } finally {
 
         if (p_privatekey != IntPtr.Zero) Marshal.FreeHGlobal(p_privatekey);
         if (p_sharedsecret != IntPtr.Zero) Marshal.FreeHGlobal(p_sharedsecret);

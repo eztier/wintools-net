@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
+using System.ComponentModel;
 
 namespace wintools {
 
@@ -36,7 +37,12 @@ namespace wintools {
           string[] s = secret.Split('\x20');
           key = GetBase64FromHexString(s[0]);
           iv = GetBase64FromHexString(s[1]);
-        } catch (Exception e) { throw new Exception(encryption.GetLastError); }
+        } catch (Win32Exception w) {
+          System.IO.File.WriteAllText(UnmanagedEncryption.executingDirectory + "\\encryption-provider-error.log", string.Format("{0}\r\n{1}\r\n{2}\r\n{3}", privateKey, sharedSecret, w.Message, w.StackTrace));
+          throw w;          
+        } catch (Exception e) { // throw new Exception(encryption.GetLastError);
+          throw e;
+        }
       }
     }
 
