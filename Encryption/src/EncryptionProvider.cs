@@ -38,7 +38,7 @@ namespace wintools {
           key = GetBase64FromHexString(s[0]);
           iv = GetBase64FromHexString(s[1]);
         } catch (Win32Exception w) {
-          System.IO.File.WriteAllText(UnmanagedEncryption.executingDirectory + "\\encryption-provider-error.log", string.Format("{0}\r\n{1}\r\n{2}\r\n{3}", privateKey, sharedSecret, w.Message, w.StackTrace));
+          // System.IO.File.WriteAllText(UnmanagedEncryption.executingDirectory + "\\encryption-provider-error.log", string.Format("{0}\r\n{1}\r\n{2}\r\n{3}", privateKey, sharedSecret, w.Message, w.StackTrace));
           throw w;          
         } catch (Exception e) { // throw new Exception(encryption.GetLastError);
           throw e;
