@@ -71,7 +71,7 @@
     </Compile>
     <Compile Include="src\EncryptionProvider.cs" />
     <Compile Include="src\UnmanagedEncryption.cs" />
-    <Compile Include="Test.cs" />
+    <!-- <Compile Include="Test.cs" /> -->
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -79,12 +79,14 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <!--
     <None Include="resources\key-final.enc">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="resources\privatekey.pem">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    -->
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">
@@ -99,15 +101,17 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <!--
     <Content Include="resources\security-plain.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>Designer</SubType>
     </Content>
+    -->
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>xcopy /f /y $(SolutionDir)..\wintools\build\Release\tinycrypto.dll $(TargetDir)
-xcopy /f /y $(SolutionDir)..\wintools\build\Release\libeay32.dll $(TargetDir)
+    <PreBuildEvent><!-- xcopy /f /y $(SolutionDir)..\wintools\build\Release\tinycrypto.dll $(TargetDir)
+xcopy /f /y $(SolutionDir)..\wintools\build\Release\libeay32.dll $(TargetDir) -->
 </PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -69,8 +69,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>xcopy /f /y $(SolutionDir)..\wintools\build\Release\tinycrypto.dll $(TargetDir)
-xcopy /f /y $(SolutionDir)..\wintools\build\Release\libeay32.dll $(TargetDir)
+    <PreBuildEvent><!-- xcopy /f /y $(SolutionDir)..\wintools\build\Release\tinycrypto.dll $(TargetDir)
+xcopy /f /y $(SolutionDir)..\wintools\build\Release\libeay32.dll $(TargetDir) -->
 </PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
