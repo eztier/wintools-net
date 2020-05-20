@@ -9,3 +9,6 @@ packages/nspec*
 Test.cs
 packages*/
 internal/
+**/build
+**/testbuild
+**/.fake
