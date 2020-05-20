@@ -22,7 +22,8 @@ namespace wintools {
         UnloadDllWrapper();
       }
     }
-
+    
+    OperatingSystem os = Environment.OSVersion;
     string privateKey = null;
     string sharedSecret = null;
 
@@ -49,14 +50,21 @@ namespace wintools {
 
       [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
       public static extern IntPtr MemCopy(IntPtr dest, IntPtr src, uint count);
+      
+      [DllImport("libdl.so")]
+      protected static extern IntPtr dlopen(string filename, int flags);
+
+      [DllImport("libdl.so")]
+      protected static extern IntPtr dlsym(IntPtr handle, string symbol);
     }
 
     IntPtr dll_pointer = IntPtr.Zero;
     IntPtr decrypt_file_x_ptr = IntPtr.Zero;
 
     public static string executingDirectory = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory;
-    string unmanagedDll = executingDirectory + "\\tinycrypto.dll";
-    string libeay32_dll = executingDirectory + "\\libeay32.dll";
+    string filePrefix = pid != PlatformID.Unix ? "\\" : "";
+    string unmanagedDll = executingDirectory + filePrefix + "tinycrypto.dll";
+    string libeay32_dll = executingDirectory + filePrefix + "libeay32.dll";
     const string C_DECRYPT_FILE_X = "DecryptFileX";
     const string C_ENCRYPT_FILE_X = "EncryptFileX";
     const string C_ENCRYPT_FILE_INIT = "EncryptFileInit";
@@ -64,6 +72,8 @@ namespace wintools {
     const string C_ENCRYPT_FILE_FINAL = "EncryptFileFinal";
     const string C_FREE_DECRYPTED_MEMORY = "FreeDecryptedMemory";
     const string C_get_shared_secret = "get_shared_secret";
+
+    const int RTLD_NOW = 2; // for linux dlopen's flags 
     
     delegate IntPtr DecryptFileX(IntPtr private_key, IntPtr shared_secret, IntPtr filename, int* decrypted_size);
     delegate void FreeDecryptedMemory();
@@ -89,32 +99,54 @@ namespace wintools {
     }
 
     void CreateDynamicDllWrapper() {
-      if (!File.Exists(unmanagedDll) | !File.Exists(libeay32_dll)) {
+      PlatformID pid = os.Platform;
+      auto isUnix = (pid == PlatformID.Unix);
+      // System.Console.WriteLine(pid);  
+      if (!File.Exists(unmanagedDll) | (!isUnix && !File.Exists(libeay32_dll))) {
         throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
       }
-      dll_pointer = NativeMethods.LoadLibrary(unmanagedDll);
-
+      
+      if (!isUnix)
+        dll_pointer = NativeMethods.LoadLibrary(unmanagedDll);
+      else
+        dll_pointer = NativeMethods.dlopen(unmanagedDll, RTLD_NOW);
+        
       if (dll_pointer == IntPtr.Zero) {
         throw new Win32Exception(Marshal.GetLastWin32Error());
       }
 
-      IntPtr pDecryptFileX = NativeMethods.GetProcAddress(dll_pointer, C_DECRYPT_FILE_X);
+      IntPtr pDecryptFileX = IntPtr.Zero;
+      IntPtr pEncryptFileX = IntPtr.Zero;
+      IntPtr pFreeDecryptedMemory = IntPtr.Zero;
+      IntPtr pEncryptFileInit = IntPtr.Zero;
+      IntPtr pEncryptFileUpdate = IntPtr.Zero;
+      IntPtr pEncryptFileFinal = IntPtr.Zero;
+      IntPtr pGetSharedSecret = IntPtr.Zero;
+      
+      if (!isUnix) {
+        pDecryptFileX = NativeMethods.GetProcAddress(dll_pointer, C_DECRYPT_FILE_X);
+        pEncryptFileX = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_X);
+        pFreeDecryptedMemory = NativeMethods.GetProcAddress(dll_pointer, C_FREE_DECRYPTED_MEMORY);
+        pEncryptFileInit = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_INIT);
+        pEncryptFileUpdate = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_UPDATE);
+        pEncryptFileFinal = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_FINAL);
+        pGetSharedSecret = NativeMethods.GetProcAddress(dll_pointer, C_get_shared_secret);
+      } else {
+        pDecryptFileX = NativeMethods.dlsym(dll_pointer, C_DECRYPT_FILE_X);
+        pEncryptFileX = NativeMethods.dlsym(dll_pointer, C_ENCRYPT_FILE_X);
+        pFreeDecryptedMemory = NativeMethods.dlsym(dll_pointer, C_FREE_DECRYPTED_MEMORY);
+        pEncryptFileInit = NativeMethods.dlsym(dll_pointer, C_ENCRYPT_FILE_INIT);
+        pEncryptFileUpdate = NativeMethods.dlsym(dll_pointer,  C_ENCRYPT_FILE_UPDATE);
+        pEncryptFileFinal = NativeMethods.dlsym(dll_pointer, C_ENCRYPT_FILE_FINAL);
+        pGetSharedSecret = NativeMethods.dlsym(dll_pointer, C_get_shared_secret);
+      }
+      
       DecryptFileXHandler = (DecryptFileX)Marshal.GetDelegateForFunctionPointer(pDecryptFileX, typeof(DecryptFileX));
-
-      IntPtr pEncryptFileX = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_X);
       EncryptFileXHandler = (EncryptFileX)Marshal.GetDelegateForFunctionPointer(pEncryptFileX, typeof(EncryptFileX));
-
-      IntPtr pFreeDecryptedMemory = NativeMethods.GetProcAddress(dll_pointer, C_FREE_DECRYPTED_MEMORY);
       FreeDecryptedMemoryHandler = (FreeDecryptedMemory)Marshal.GetDelegateForFunctionPointer(pFreeDecryptedMemory, typeof(FreeDecryptedMemory));
-
-      IntPtr pEncryptFileInit = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_INIT);
       EncryptFileInitHandler = (EncryptFileInit)Marshal.GetDelegateForFunctionPointer(pEncryptFileInit, typeof(EncryptFileInit));
-      IntPtr pEncryptFileUpdate = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_UPDATE);
       EncryptFileUpdateHandler = (EncryptFileUpdate)Marshal.GetDelegateForFunctionPointer(pEncryptFileUpdate, typeof(EncryptFileUpdate));
-      IntPtr pEncryptFileFinal = NativeMethods.GetProcAddress(dll_pointer, C_ENCRYPT_FILE_FINAL);
       EncryptFileFinalHandler = (EncryptFileFinal)Marshal.GetDelegateForFunctionPointer(pEncryptFileFinal, typeof(EncryptFileFinal));
-
-      IntPtr pGetSharedSecret = NativeMethods.GetProcAddress(dll_pointer, C_get_shared_secret);
       GetSharedSecretHandler = (get_shared_secret)Marshal.GetDelegateForFunctionPointer(pGetSharedSecret, typeof(get_shared_secret));
 
     }
