@@ -23,7 +23,7 @@ namespace wintools {
       }
     }
     
-    OperatingSystem os = Environment.OSVersion;
+    static OperatingSystem os = Environment.OSVersion;
     string privateKey = null;
     string sharedSecret = null;
 
@@ -52,17 +52,18 @@ namespace wintools {
       public static extern IntPtr MemCopy(IntPtr dest, IntPtr src, uint count);
       
       [DllImport("libdl.so")]
-      protected static extern IntPtr dlopen(string filename, int flags);
+      public static extern IntPtr dlopen(string filename, int flags);
 
       [DllImport("libdl.so")]
-      protected static extern IntPtr dlsym(IntPtr handle, string symbol);
+      public static extern IntPtr dlsym(IntPtr handle, string symbol);
     }
 
     IntPtr dll_pointer = IntPtr.Zero;
     IntPtr decrypt_file_x_ptr = IntPtr.Zero;
 
     public static string executingDirectory = AppDomain.CurrentDomain.RelativeSearchPath ?? AppDomain.CurrentDomain.BaseDirectory;
-    string filePrefix = pid != PlatformID.Unix ? "\\" : "";
+    static bool isUnix = (os.Platform == PlatformID.Unix);
+    static string filePrefix = !isUnix ? "\\" : "";
     string unmanagedDll = executingDirectory + filePrefix + "tinycrypto.dll";
     string libeay32_dll = executingDirectory + filePrefix + "libeay32.dll";
     const string C_DECRYPT_FILE_X = "DecryptFileX";
@@ -99,8 +100,6 @@ namespace wintools {
     }
 
     void CreateDynamicDllWrapper() {
-      PlatformID pid = os.Platform;
-      auto isUnix = (pid == PlatformID.Unix);
       // System.Console.WriteLine(pid);  
       if (!File.Exists(unmanagedDll) | (!isUnix && !File.Exists(libeay32_dll))) {
         throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
