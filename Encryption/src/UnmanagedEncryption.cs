@@ -56,6 +56,9 @@ namespace wintools {
 
       [DllImport("libdl.so")]
       public static extern IntPtr dlsym(IntPtr handle, string symbol);
+
+      [DllImport("libdl.so")]
+      public static extern IntPtr dlerror();
     }
 
     IntPtr dll_pointer = IntPtr.Zero;
@@ -111,7 +114,13 @@ namespace wintools {
         dll_pointer = NativeMethods.dlopen(unmanagedDll, RTLD_NOW);
         
       if (dll_pointer == IntPtr.Zero) {
-        throw new Win32Exception(Marshal.GetLastWin32Error());
+        if (isUnix) {
+          IntPtr errPtr = NativeMethods.dlerror();
+          string errMsg = Marshal.PtrToStringAnsi(errPtr);
+          throw new Exception(errMsg);
+        } else {
+          throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
       }
 
       IntPtr pDecryptFileX = IntPtr.Zero;

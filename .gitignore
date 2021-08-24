@@ -12,3 +12,4 @@ internal/
 **/build
 **/testbuild
 **/.fake
+**/.vs
