@@ -55,6 +55,9 @@ namespace wintools {
       public static extern IntPtr dlopen(string filename, int flags);
 
       [DllImport("libdl.so")]
+      public static extern bool dlclose(IntPtr handle);
+
+      [DllImport("libdl.so")]
       public static extern IntPtr dlsym(IntPtr handle, string symbol);
 
       [DllImport("libdl.so")]
@@ -69,6 +72,7 @@ namespace wintools {
     static string filePrefix = !isUnix ? "\\" : "";
     string unmanagedDll = executingDirectory + filePrefix + "tinycrypto.dll";
     string libeay32_dll = executingDirectory + filePrefix + "libeay32.dll";
+    string libcrypto_so = "libcrypto.so";
     const string C_DECRYPT_FILE_X = "DecryptFileX";
     const string C_ENCRYPT_FILE_X = "EncryptFileX";
     const string C_ENCRYPT_FILE_INIT = "EncryptFileInit";
@@ -77,8 +81,11 @@ namespace wintools {
     const string C_FREE_DECRYPTED_MEMORY = "FreeDecryptedMemory";
     const string C_get_shared_secret = "get_shared_secret";
 
-    const int RTLD_NOW = 2; // for linux dlopen's flags 
-    
+    private const int RTLD_LOCAL = 0x000000;
+    private const int RTLD_LAZY = 0x00001; //Only resolve symbols as needed
+    private const int RTLD_NOW = 0x00002; // for linux dlopen's flags 
+    private const int RTLD_GLOBAL = 0x00100; //Make symbols available to libraries loaded later
+
     delegate IntPtr DecryptFileX(IntPtr private_key, IntPtr shared_secret, IntPtr filename, int* decrypted_size);
     delegate void FreeDecryptedMemory();
     delegate int EncryptFileX(IntPtr data, UInt32 datasize, IntPtr private_key, IntPtr shared_secret, IntPtr filename);
@@ -97,7 +104,11 @@ namespace wintools {
     
     internal bool UnloadDllWrapper() {
       if (dll_pointer != null && dll_pointer != IntPtr.Zero) {
-        return NativeMethods.FreeLibrary(dll_pointer);
+        if (isUnix)
+          return NativeMethods.dlclose(dll_pointer);
+        else
+          return NativeMethods.FreeLibrary(dll_pointer);
+      
       } else
         return true;
     }
@@ -107,12 +118,13 @@ namespace wintools {
       if (!File.Exists(unmanagedDll) | (!isUnix && !File.Exists(libeay32_dll))) {
         throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
       }
-      
+
       if (!isUnix)
         dll_pointer = NativeMethods.LoadLibrary(unmanagedDll);
-      else
-        dll_pointer = NativeMethods.dlopen(unmanagedDll, RTLD_NOW);
-        
+      else {
+        NativeMethods.dlopen(libcrypto_so, RTLD_NOW | RTLD_GLOBAL); 
+        dll_pointer = NativeMethods.dlopen(unmanagedDll, RTLD_NOW | RTLD_LOCAL);
+      }
       if (dll_pointer == IntPtr.Zero) {
         if (isUnix) {
           IntPtr errPtr = NativeMethods.dlerror();
@@ -261,6 +273,10 @@ namespace wintools {
       IntPtr p_sharedsecret = IntPtr.Zero;
       string retval = "";
       try {
+        if (isUnix) {
+          privateKey = privateKey.Replace("\\", "/");
+          sharedSecret = sharedSecret.Replace("\\", "/");
+        }
         p_privatekey = Marshal.StringToHGlobalAnsi(privateKey);
         p_sharedsecret = Marshal.StringToHGlobalAnsi(sharedSecret);
         

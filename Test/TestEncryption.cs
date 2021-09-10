@@ -7,15 +7,24 @@ using System.Xml.Linq;
 namespace wintools.Test {
   class InternalTest {
     public static void EncryptionFromFile(EncryptionProvider provider) {
-      var credstring = File.ReadAllText("resources\\security-plain.xml", Encoding.UTF8);
-      var cipher_s = provider.Encrypt(credstring, Encoding.UTF8);
-      File.WriteAllText("resources\\security-enc.xml", cipher_s, Encoding.UTF8);
+      string plainfile = "resources\\security-plain.xml";
+      string encryptedfile = "resources\\security-enc.xml";
+      string decryptedfile = "resources\\security-restored.txt";
+      if (System.Environment.OSVersion.Platform == PlatformID.Unix) {
+        plainfile = plainfile.Replace("\\", "/");
+        encryptedfile = encryptedfile.Replace("\\", "/");
+        decryptedfile = decryptedfile.Replace("\\", "/");
+      }
 
-      string read_s = File.ReadAllText("resources\\security-enc.xml", Encoding.UTF8);
+      var credstring = File.ReadAllText(plainfile, Encoding.UTF8);
+      var cipher_s = provider.Encrypt(credstring, Encoding.UTF8);
+      File.WriteAllText(encryptedfile, cipher_s, Encoding.UTF8);
+
+      string read_s = File.ReadAllText(encryptedfile, Encoding.UTF8);
       string plaintext = provider.Decrypt(read_s, Encoding.UTF8);
 
       Console.WriteLine(plaintext);
-      // File.WriteAllText("resources\\security-restored.txt", plaintext + "\n", Encoding.UTF8);
+      File.WriteAllText(decryptedfile, plaintext + "\n", Encoding.UTF8);
 
       var doc = XDocument.Parse(plaintext);
       string module = "Click", store = "GRANTS", environment = "STAGING";
