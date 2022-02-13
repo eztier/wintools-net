@@ -114,8 +114,10 @@ namespace wintools {
     }
 
     void CreateDynamicDllWrapper() {
+      Func<string, string> fixOSPath = (string path) => isUnix ? path.Replace("\\", "/") : path;
+
       // System.Console.WriteLine(pid);  
-      if (!File.Exists(unmanagedDll) | (!isUnix && !File.Exists(libeay32_dll))) {
+      if (!File.Exists(fixOSPath(unmanagedDll)) | (!isUnix && !File.Exists(fixOSPath(libeay32_dll)))) {
         throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
       }
 
