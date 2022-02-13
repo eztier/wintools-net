@@ -71,6 +71,7 @@ namespace wintools {
     static bool isUnix = (os.Platform == PlatformID.Unix);
     static string filePrefix = !isUnix ? "\\" : "";
     string unmanagedDll = executingDirectory + filePrefix + "tinycrypto.dll";
+    string unmanagedDll_so = executingDirectory + filePrefix + "tinycrypto.so";
     string libeay32_dll = executingDirectory + filePrefix + "libeay32.dll";
     string libcrypto_so = "libcrypto.so";
     const string C_DECRYPT_FILE_X = "DecryptFileX";
@@ -117,15 +118,15 @@ namespace wintools {
       Func<string, string> fixOSPath = (string path) => isUnix ? path.Replace("\\", "/") : path;
 
       // System.Console.WriteLine(pid);  
-      if (!File.Exists(fixOSPath(unmanagedDll)) | (!isUnix && !File.Exists(fixOSPath(libeay32_dll)))) {
-        throw new Exception(unmanagedDll + " or " + libeay32_dll + " cannot be found.");
+      if ((!isUnix && !File.Exists(fixOSPath(unmanagedDll))) | (!isUnix && !File.Exists(fixOSPath(libeay32_dll))) | (isUnix && !File.Exists(unmanagedDll_so))) {
+        throw new Exception(unmanagedDll + " or " + unmanagedDll_so + " or " + libeay32_dll + " cannot be found.");
       }
 
       if (!isUnix)
         dll_pointer = NativeMethods.LoadLibrary(unmanagedDll);
       else {
         NativeMethods.dlopen(libcrypto_so, RTLD_NOW | RTLD_GLOBAL); 
-        dll_pointer = NativeMethods.dlopen(unmanagedDll, RTLD_NOW | RTLD_LOCAL);
+        dll_pointer = NativeMethods.dlopen(unmanagedDll_so, RTLD_NOW | RTLD_LOCAL);
       }
       if (dll_pointer == IntPtr.Zero) {
         if (isUnix) {
